@@ -21,13 +21,22 @@ const Login = () => {
     setLoading(true);
     
     try {
+      console.log('Đang đăng nhập với:', formData);
       const result = await login(formData.email, formData.password);
+      console.log('Kết quả đăng nhập:', result);
+
       if (result.success) {
+        console.log('Đăng nhập thành công với role:', result.role);
         // Chuyển hướng dựa vào role
         if (result.role === 'admin') {
           navigate('/admin');
         } else if (result.role === 'manager') {
           navigate('/manager');
+        } else if (result.role === 'user') {
+          navigate('/employee');
+        } else {
+          console.error('Role không hợp lệ:', result.role);
+          Toast.error('Role không hợp lệ');
         }
       } else {
         // Đợi một chút để đảm bảo Bootstrap đã được load

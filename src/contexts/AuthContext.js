@@ -22,9 +22,24 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axiosInstance.post('/auth/login', { email, password });
       console.log('Login response:', response.data);
-      const { access_token } = response.data.data;
-      const { role } = response.data.data.employee;
       
+      // Kiểm tra cấu trúc response
+      if (!response.data.data || !response.data.data.access_token) {
+        console.error('Invalid response structure:', response.data);
+        return { success: false };
+      }
+
+      const { access_token } = response.data.data;
+      const role = response.data.data.employee?.role;
+
+      console.log('Token:', access_token);
+      console.log('Role:', role);
+
+      if (!role) {
+        console.error('Role not found in response');
+        return { success: false };
+      }
+
       localStorage.setItem('token', access_token);
       localStorage.setItem('userRole', role);
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;

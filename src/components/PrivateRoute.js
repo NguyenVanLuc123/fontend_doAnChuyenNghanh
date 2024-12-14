@@ -24,6 +24,10 @@ const PrivateRoute = ({ children, roles }) => {
     if (user.role === 'manager') {
       return <Navigate to="/manager" />;
     }
+    // Nếu là user (nhân viên), chuyển về /employee
+    if (user.role === 'user') {
+      return <Navigate to="/employee" />;
+    }
     // Nếu không có role hợp lệ, chuyển về trang chủ
     return <Navigate to="/" />;
   }
