@@ -1,20 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DataTable from 'react-data-table-component';
 import { Modal } from 'bootstrap';
-import { getManagers, createManager, updateManager, deleteManager } from '../../services/api';
+import { getDepartments, getManagers, createManager, updateManager, deleteManager } from '../../services/api';
 import { toast } from 'react-toastify';
 
 const ManagerList = () => {
   const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedManager, setSelectedManager] = useState(null);
+  const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     fullName: '',
-    phoneNumber: ''
+    phoneNumber: '',
+    departmentId: '',
+    birthDate: ''
   });
-  
+
   const addModalRef = useRef(null);
   const editModalRef = useRef(null);
   const deleteModalRef = useRef(null);
@@ -24,9 +27,20 @@ const ManagerList = () => {
     addModalRef.current = new Modal(document.getElementById('addManagerModal'));
     editModalRef.current = new Modal(document.getElementById('editManagerModal'));
     deleteModalRef.current = new Modal(document.getElementById('deleteManagerModal'));
-    
+
     fetchManagers();
+    fetchDepartments();
   }, []);
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await getDepartments();
+      setDepartments(response.data.data);
+    } catch (error) {
+      toast.error('Lỗi khi tải danh sách phòng ban');
+      console.error('Error fetching departments:', error);
+    }
+  };
 
   const fetchManagers = async () => {
     setLoading(true);
@@ -46,14 +60,21 @@ const ManagerList = () => {
 
   const handleAdd = async () => {
     try {
-      await createManager(formData);
+      const managerData = {
+        ...formData,
+        role: "manager",
+        birthDate: new Date(formData.birthDate).toISOString().split('T')[0]
+      };
+      await createManager(managerData);
       toast.success('Thêm quản lý thành công');
       addModalRef.current.hide();
       setFormData({
         email: '',
         password: '',
         fullName: '',
-        phoneNumber: ''
+        phoneNumber: '',
+        departmentId: '',
+        birthDate: ''
       });
       fetchManagers();
     } catch (error) {
@@ -64,7 +85,15 @@ const ManagerList = () => {
 
   const handleEdit = async () => {
     try {
-      await updateManager(selectedManager.id, formData);
+      const updatedData = {
+        email: formData.email,
+        fullName: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        departmentId: formData.departmentId,
+        birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString().split('T')[0] : undefined
+      };
+
+      await updateManager(selectedManager.id, updatedData);
       toast.success('Cập nhật quản lý thành công');
       editModalRef.current.hide();
       fetchManagers();
@@ -114,12 +143,17 @@ const ManagerList = () => {
           <button
             className="btn btn-sm btn-primary me-2"
             onClick={() => {
+              console.log('Row data:', row);
               setSelectedManager(row);
-              setFormData({
+              const formData = {
                 email: row.email,
                 fullName: row.fullName,
-                phoneNumber: row.phoneNumber
-              });
+                phoneNumber: row.phoneNumber,
+                departmentId: row.department?.id || '',
+                birthDate: row.birthDate || ''
+              };
+              console.log('Initial form data:', formData);
+              setFormData(formData);
               editModalRef.current.show();
             }}
           >
@@ -151,7 +185,9 @@ const ManagerList = () => {
                 email: '',
                 password: '',
                 fullName: '',
-                phoneNumber: ''
+                phoneNumber: '',
+                departmentId: '',
+                birthDate: ''
               });
               addModalRef.current.show();
             }}
@@ -221,6 +257,34 @@ const ManagerList = () => {
                       onChange={handleInputChange}
                     />
                   </div>
+                  <div className="mb-3">
+                    <label className="form-label">Ngày sinh</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      name="birthDate"
+                      value={formData.birthDate}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Phòng ban</label>
+                    <select
+                      className="form-select"
+                      name="departmentId"
+                      value={formData.departmentId}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Chọn phòng ban</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.departmentName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </form>
               </div>
               <div className="modal-footer">
@@ -270,6 +334,23 @@ const ManagerList = () => {
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
                     />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Phòng ban</label>
+                    <select
+                      className="form-select"
+                      name="departmentId"
+                      value={formData.departmentId}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Chọn phòng ban</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.departmentName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </form>
               </div>

@@ -39,7 +39,7 @@ export const login = (credentials) => api.post('/auth/login', credentials);
 
 // Manager APIs
 export const getManagers = () => api.get('/employees');
-export const createManager = (data) => api.post('/employees', data);
+export const createManager = (data) => api.post('/auth/register', data);
 export const updateManager = (id, data) => api.patch(`/employees/${id}`, data);
 export const deleteManager = (id) => api.delete(`/employees/${id}`);
 

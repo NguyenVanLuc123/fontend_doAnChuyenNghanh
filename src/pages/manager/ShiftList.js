@@ -14,7 +14,7 @@ const ShiftList = () => {
     endTime: '',
     description: ''
   });
-  
+
   const addModalRef = useRef(null);
   const editModalRef = useRef(null);
   const deleteModalRef = useRef(null);
@@ -24,7 +24,7 @@ const ShiftList = () => {
     addModalRef.current = new Modal(document.getElementById('addShiftModal'));
     editModalRef.current = new Modal(document.getElementById('editShiftModal'));
     deleteModalRef.current = new Modal(document.getElementById('deleteShiftModal'));
-    
+
     fetchShifts();
   }, []);
 
@@ -64,7 +64,12 @@ const ShiftList = () => {
 
   const handleEdit = async () => {
     try {
-      await updateShift(selectedShift.id, formData);
+      const updatedShiftData = {
+        ...formData,
+        startTime: formData.startTime.substring(0, 5), // Lấy chỉ giờ:phút
+        endTime: formData.endTime.substring(0, 5), // Lấy chỉ giờ:phút
+      };
+      await updateShift(selectedShift.id, updatedShiftData);
       toast.success('Cập nhật ca làm việc thành công');
       editModalRef.current.hide();
       fetchShifts();

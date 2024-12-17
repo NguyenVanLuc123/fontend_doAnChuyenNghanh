@@ -15,9 +15,10 @@ import ShiftList from './pages/manager/ShiftList';
 import Timekeeping from './pages/manager/Timekeeping';
 import Attendance from './pages/manager/Attendance';
 import QRDisplay from './pages/manager/QRDisplay';
+import TimekeepingRecords from './pages/manager/TimekeepingRecord';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
-
+import SalaryCalculation from './pages/manager/SalaryCalculation';
 function App() {
   return (
     <AuthProvider>
@@ -48,6 +49,8 @@ function App() {
             <Route path="timekeeping" element={<Timekeeping />} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="qr-display" element={<QRDisplay />} />
+            <Route path="timekeeping-records" element={<TimekeepingRecords />} />
+            <Route path="salary" element={<SalaryCalculation />} />
           </Route>
 
           {/* Employee Routes */}

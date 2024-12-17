@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getEmployees, getShifts } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { jwtDecode } from 'jwt-decode';
+import axios from '../../utils/axios';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -9,9 +11,27 @@ const Dashboard = () => {
     activeEmployees: 0, 
   });
   const { user } = useAuth();
+  const lateChartRef = useRef(null);
+  const punctualChartRef = useRef(null);
+  const [attendanceStats, setAttendanceStats] = useState({
+    lateEmployees: [],
+    punctualEmployees: []
+  });
 
   useEffect(() => {
-    fetchDashboardData();
+    const loadChartJS = async () => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+      script.async = true;
+      document.body.appendChild(script);
+
+      script.onload = () => {
+        fetchDashboardData();
+        fetchAttendanceStats();
+      };
+    };
+
+    loadChartJS();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -31,6 +51,124 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+    }
+  };
+
+  const fetchAttendanceStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const decodedToken = jwtDecode(token);
+      const departmentId = decodedToken.departmentId;
+
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+      const response = await axios.get(`/timekeeping/department/${departmentId}`, {
+        params: { startDate, endDate }
+      });
+
+      // Process attendance data
+      const employeeStats = processAttendanceData(response.data.data);
+      setAttendanceStats(employeeStats);
+      
+      // Create charts
+      createCharts(employeeStats);
+    } catch (error) {
+      console.error('Error fetching attendance stats:', error);
+    }
+  };
+
+  const processAttendanceData = (records) => {
+    const employeeLateCounts = {};
+    const employeePunctualCounts = {};
+
+    records.forEach(record => {
+      const employeeName = record.employee?.fullName || 'N/A';
+      const checkInTime = record.checkInTime;
+      const shiftStartTime = record.shift?.startTime;
+
+      if (checkInTime && shiftStartTime) {
+        const [checkInHours, checkInMinutes] = checkInTime.split(':').map(Number);
+        const [shiftHours, shiftMinutes] = shiftStartTime.split(':').map(Number);
+        const checkInTotal = checkInHours * 60 + checkInMinutes;
+        const shiftTotal = shiftHours * 60 + shiftMinutes;
+
+        if (checkInTotal > shiftTotal + 5) {
+          employeeLateCounts[employeeName] = (employeeLateCounts[employeeName] || 0) + 1;
+        } else {
+          employeePunctualCounts[employeeName] = (employeePunctualCounts[employeeName] || 0) + 1;
+        }
+      }
+    });
+
+    return {
+      lateEmployees: Object.entries(employeeLateCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5),
+      punctualEmployees: Object.entries(employeePunctualCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5)
+    };
+  };
+
+  const createCharts = (stats) => {
+    // Destroy existing charts if they exist
+    if (lateChartRef.current) {
+      lateChartRef.current.destroy();
+    }
+    if (punctualChartRef.current) {
+      punctualChartRef.current.destroy();
+    }
+
+    // Create Late Employees Chart
+    const lateCtx = document.getElementById('lateEmployeesChart');
+    if (lateCtx && window.Chart) {
+      lateChartRef.current = new window.Chart(lateCtx, {
+        type: 'bar',
+        data: {
+          labels: stats.lateEmployees.map(([name]) => name),
+          datasets: [{
+            label: 'Số lần đi muộn',
+            data: stats.lateEmployees.map(([, count]) => count),
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgb(255, 99, 132)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // Create Punctual Employees Chart
+    const punctualCtx = document.getElementById('punctualEmployeesChart');
+    if (punctualCtx && window.Chart) {
+      punctualChartRef.current = new window.Chart(punctualCtx, {
+        type: 'bar',
+        data: {
+          labels: stats.punctualEmployees.map(([name]) => name),
+          datasets: [{
+            label: 'Số lần đúng giờ',
+            data: stats.punctualEmployees.map(([, count]) => count),
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgb(75, 192, 192)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
     }
   };
 
@@ -110,6 +248,40 @@ const Dashboard = () => {
           </div>
         </div>
       </section>
+
+      <div className="row">
+        <div className="col-lg-6">
+          <div className="card">
+            <div className="card-body">
+              <h5 className="card-title">Top nhân viên đi muộn trong tháng</h5>
+              <canvas id="lateEmployeesChart"></canvas>
+              <div className="mt-3">
+                {attendanceStats.lateEmployees.map(([name, count], index) => (
+                  <div key={index} className="mb-2">
+                    {index + 1}. {name}: {count} lần
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-6">
+          <div className="card">
+            <div className="card-body">
+              <h5 className="card-title">Top nhân viên đi làm đúng giờ trong tháng</h5>
+              <canvas id="punctualEmployeesChart"></canvas>
+              <div className="mt-3">
+                {attendanceStats.punctualEmployees.map(([name, count], index) => (
+                  <div key={index} className="mb-2">
+                    {index + 1}. {name}: {count} lần
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   );
 };

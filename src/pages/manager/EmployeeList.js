@@ -18,7 +18,7 @@ const EmployeeList = () => {
   const addModalRef = useRef(null);
   const editModalRef = useRef(null);
   const deleteModalRef = useRef(null);
-
+  const user = JSON.parse(localStorage.getItem('user'));
   useEffect(() => {
     // Initialize Bootstrap modals
     addModalRef.current = new Modal(document.getElementById('addEmployeeModal'));
@@ -120,15 +120,18 @@ const EmployeeList = () => {
           >
             <i className="bi bi-pencil"></i>
           </button>
-          <button
-            className="btn btn-sm btn-danger"
-            onClick={() => {
-              setSelectedEmployee(row);
-              deleteModalRef.current.show();
-            }}
-          >
-            <i className="bi bi-trash"></i>
-          </button>
+          {/* Chỉ hiển thị nút xóa khi user là admin */}
+          {user?.role === 'admin' && (
+            <button
+              className="btn btn-sm btn-danger"
+              onClick={() => {
+                setSelectedEmployee(row);
+                deleteModalRef.current.show();
+              }}
+            >
+              <i className="bi bi-trash"></i>
+            </button>
+          )}
         </>
       ),
     },
