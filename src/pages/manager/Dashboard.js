@@ -1,22 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getEmployees, getShifts } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { jwtDecode } from 'jwt-decode';
 import axios from '../../utils/axios';
+import { jwtDecode } from 'jwt-decode';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
     totalEmployees: 0,
     totalShifts: 0,
-    activeEmployees: 0, 
+    activeEmployees: 0,
   });
-  const { user } = useAuth();
   const lateChartRef = useRef(null);
   const punctualChartRef = useRef(null);
   const [attendanceStats, setAttendanceStats] = useState({
     lateEmployees: [],
     punctualEmployees: []
   });
+  const [departmentName, setDepartmentName] = useState('N/A');
 
   useEffect(() => {
     const loadChartJS = async () => {
@@ -26,6 +25,7 @@ const Dashboard = () => {
       document.body.appendChild(script);
 
       script.onload = () => {
+        fetchDepartmentName();
         fetchDashboardData();
         fetchAttendanceStats();
       };
@@ -70,6 +70,7 @@ const Dashboard = () => {
 
       // Process attendance data
       const employeeStats = processAttendanceData(response.data.data);
+      
       setAttendanceStats(employeeStats);
       
       // Create charts
@@ -172,6 +173,16 @@ const Dashboard = () => {
     }
   };
 
+  const fetchDepartmentName = async () => {
+    try {
+      const departmentsResponse = await axios.get('/departments');
+      const departmentName = departmentsResponse.data.data.departmentName;
+      setDepartmentName(departmentName);
+    } catch (error) {
+      console.error('Error fetching department name:', error);
+    }
+  };
+
   return (
     <main id="main" className="main">
       <div className="pagetitle">
@@ -237,7 +248,7 @@ const Dashboard = () => {
                         <i className="bi bi-building"></i>
                       </div>
                       <div className="ps-3">
-                        <h6>Phòng {user?.departmentName || "N/A"}</h6>
+                        <h6>Phòng {departmentName}</h6>
                         <span className="text-muted small pt-2 ps-1">Quản lý</span>
                       </div>
                     </div>
